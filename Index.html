@@ -1,0 +1,43 @@
+const express = require("express");
+const axios = require("axios");
+const app = express();
+
+app.use(express.json());
+
+app.post("/webhook", async (req, res) => {
+  const city = req.body.queryResult.parameters.city;
+
+  // Example: Basic mapping from city to coordinates (expand this as needed)
+  const cityCoordinates = {
+    "New York": { latitude: 40.7128, longitude: -74.0060 },
+    London: { latitude: 51.5074, longitude: -0.1278 },
+  };
+
+  if (!cityCoordinates[city]) {
+    return res.json({
+      fulfillmentText: `I don't have the weather data for ${city}.`,
+    });
+  }
+
+  const { latitude, longitude } = cityCoordinates[city];
+  const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`;
+
+  try {
+    const response = await axios.get(apiUrl);
+    const weather = response.data.current_weather;
+
+    const message = `The current weather in ${city} is ${weather.temperature}°C with ${weather.weathercode_description}.`;
+
+    return res.json({
+      fulfillmentText: message,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json({
+      fulfillmentText: "I couldn't fetch the weather data at the moment. Please try again later.",
+    });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
